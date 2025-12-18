@@ -3,6 +3,7 @@ package org.example.filter;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.core.Response;
+import org.example.model.RateLimitKey;
 import org.example.service.RateLimiterService;
 
 public class RateLimiterFilter implements ContainerRequestFilter {
@@ -17,6 +18,9 @@ public class RateLimiterFilter implements ContainerRequestFilter {
     @Override
     public void filter(ContainerRequestContext requestContext) {
         String clientId = requestContext.getHeaderString(HEADER);
+        String method = requestContext.getMethod();
+        String path = "/" + requestContext.getUriInfo().getPath();
+        RateLimitKey key = new RateLimitKey(clientId, method, path);
         if(clientId == null || clientId.isEmpty()) {
             requestContext.abortWith(Response
                     .status(Response.Status.BAD_REQUEST)
@@ -24,7 +28,7 @@ public class RateLimiterFilter implements ContainerRequestFilter {
                     .build());
             return;
         }
-        boolean allowRequest = rateLimiterService.allowRequest(clientId);
+        boolean allowRequest = rateLimiterService.allowRequest(key);
         if(!allowRequest) {
             requestContext.abortWith(Response
                     .status(Response.Status.TOO_MANY_REQUESTS)
